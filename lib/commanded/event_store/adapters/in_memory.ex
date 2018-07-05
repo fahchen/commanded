@@ -215,8 +215,19 @@ defmodule Commanded.EventStore.Adapters.InMemory do
     {:reply, :ok, state}
   end
 
-  def handle_call(:reset!, _from, %State{serializer: serializer}) do
-    {:reply, :ok, %State{serializer: serializer}}
+  def handle_call(:reset!, _from, %State{} = state) do
+    new_persistent_subscriptions =
+      state.persistent_subscriptions
+      |> Enum.into(%{}, fn ({name, subscription}) ->
+        {name, %{subscription | last_seen_event_number: 0}}
+      end)
+
+    new_state = %State{
+      serializer: state.serializer,
+      persistent_subscriptions: new_persistent_subscriptions
+    }
+
+    {:reply, :ok, new_state}
   end
 
   @impl GenServer
